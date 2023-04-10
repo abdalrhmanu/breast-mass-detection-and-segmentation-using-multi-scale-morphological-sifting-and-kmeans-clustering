@@ -79,6 +79,8 @@ class Preprocessor:
         logger.info(f"Resized image shape: {self._resized_img.shape}.")
         logger.info(f"Grayscale image shape: {self._gray_img.shape}")  
         logger.info(f"Thresholded Mask Shape: {self._thresholding_mask.shape}")       
+        logger.info(f"Preprocessing pipeline complete.")       
+
 
         # Displaying some results for validation
         if plot:
