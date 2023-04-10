@@ -10,7 +10,6 @@ def plot_figures(figures, nrows = 1, ncols=1):
     nrows : number of rows of subplots wanted in the figure
     """
 
-    print(figures.keys())
     fig, axeslist = plt.subplots(ncols=ncols, nrows=nrows, figsize=(18, 6))
     for ind,title in zip(range(len(figures)), figures):
         axeslist.ravel()[ind].imshow(figures[title], cmap='gray')
