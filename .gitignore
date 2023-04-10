@@ -3,6 +3,7 @@ dataset/groundtruth/*
 dataset/images/*
 dataset/masks/*
 dataset/overlay/*
+dataset/processed/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
