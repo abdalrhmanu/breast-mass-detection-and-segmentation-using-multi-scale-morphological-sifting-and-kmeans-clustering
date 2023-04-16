@@ -4,6 +4,8 @@ import display
 import glob
 import os
 import time
+from tqdm import tqdm, tqdm_notebook
+
 
 class Preprocessor:
     def __init__(self):
@@ -55,14 +57,21 @@ class Preprocessor:
 
         cv2.imwrite(file_directory ,img_processed)
     
-    def fit(self, dataset_path, plot = False, export_processed = False):
+    def fit(self, dataset_path, process_n = None, plot = False, export_processed = False):
         if isinstance(dataset_path, str):
             start_time = time.time()
             logger.info("Started processing pipeline.")
 
             full_path_dirs = glob.glob(dataset_path+"\\*.tif")
 
-            for path in full_path_dirs:
+            if process_n is None:
+                process_n = len(full_path_dirs)
+            elif process_n == 0:
+                logger.warning("The number of processed images process_n can't be 0. \
+                               To process the entire dataset, remove the argument when calling the function.")
+                return
+                        
+            for path in tqdm(full_path_dirs[:process_n]):
                 img = cv2.imread(path)
                 self._resized_img = self._resize(img.copy())
                 self._gray_img = self._to_grayscale(self._resized_img)
