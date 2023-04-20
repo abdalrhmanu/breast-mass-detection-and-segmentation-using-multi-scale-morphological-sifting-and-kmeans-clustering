@@ -5,12 +5,10 @@ import glob
 import os
 import time
 from tqdm import tqdm, tqdm_notebook
-
+import numpy as np
 
 class Preprocessor:
     def __init__(self):
-        self.scale_factor       = 0.4
-
         self._resized_img           = None
         self._gray_img              = None
         self._thresholding_mask     = None
@@ -20,9 +18,9 @@ class Preprocessor:
         self._clahe_img             = None
 
 
-    def _resize(self, images):
+    def _resize(self, images, scale_factor = 0.4):
         # logger.info(f"Resizing with a scale factor {self.scale_factor} INTER_CUBIC interpolation.")
-        return cv2.resize(images.copy(), None, fx=self.scale_factor, fy=self.scale_factor, interpolation=cv2.INTER_CUBIC)
+        return cv2.resize(images.copy(), None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_CUBIC)
     
     def _to_grayscale(self, images):
         return cv2.cvtColor(images.copy(), cv2.COLOR_BGR2GRAY)        
@@ -54,9 +52,17 @@ class Preprocessor:
             os.makedirs(folder_directory)
             logger.info(f"New directory created '{folder_directory}'")
 
-
         cv2.imwrite(file_directory ,img_processed)
-    
+
+    def _flip_breast(self, img):
+        # Determine the orientation of the breast and flip the image if required
+        rotation_threshold = np.median(img[:1000, :400])
+
+        if rotation_threshold < 10:
+            img = cv2.flip(img, 1)
+        
+        return img
+        
     def fit(self, dataset_path, process_n = None, plot = False, export_processed = False):
         if isinstance(dataset_path, str):
             start_time = time.time()
