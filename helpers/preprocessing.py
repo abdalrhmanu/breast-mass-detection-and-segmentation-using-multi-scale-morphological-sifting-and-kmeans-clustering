@@ -16,11 +16,12 @@ class Preprocessor:
         self._segmented_img         = None
         self._rescaled_img          = None
         self._clahe_img             = None
+        self.scale_factor           = 4
 
 
-    def _resize(self, images, scale_factor = 0.4):
+    def _resize(self, images):
         # logger.info(f"Resizing with a scale factor {self.scale_factor} INTER_CUBIC interpolation.")
-        return cv2.resize(images.copy(), None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_CUBIC)
+        return cv2.resize(images.copy(), None, fx=1/self.scale_factor, fy=1/self.scale_factor, interpolation=cv2.INTER_CUBIC)
     
     def _to_grayscale(self, images):
         return cv2.cvtColor(images.copy(), cv2.COLOR_BGR2GRAY)        
