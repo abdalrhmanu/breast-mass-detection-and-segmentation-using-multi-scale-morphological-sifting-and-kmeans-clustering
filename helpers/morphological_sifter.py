@@ -26,6 +26,7 @@ class MorphologicalSifter:
     def __init__(self):
         self.preprocessor = Preprocessor()     
         self.image_dir = os.path.dirname("../dataset/processed/images/")   
+        self.overlay_dir = os.path.dirname("../dataset/processed/overlay/") 
         self.area_min = 15
         self.area_max = 3689
         self.mass_size_range = [self.area_min, self.area_max] # square mm
@@ -120,8 +121,15 @@ class MorphologicalSifter:
 
 
 
-    def fit(self, image_input_name, plot = False):
-        input_image = cv2.imread(os.path.join(self.image_dir, image_input_name))
+    def fit(self, image_input_name, plot = False, test_on_overlay=False):
+
+        if(test_on_overlay):
+            input_image = cv2.imread(os.path.join(self.overlay_dir, image_input_name))
+        else:
+            input_image = cv2.imread(os.path.join(self.image_dir, image_input_name))
+
+        if input_image is None:
+            raise ValueError("Image doesn't exist.")
 
         self.lse = self._linear_structuring_elements(self.n_scale, self.mass_diameter_range_pixel)
         self.angle_range = list(range(0, 190, self.n_lse_elements))
@@ -142,15 +150,25 @@ class MorphologicalSifter:
             
         enhanced_image = np.sum(enhanced_image, axis=0)
 
+        # applying a grayscale normalization (to 16-bit) on the summation of all the result images generated
+        # Perform normalization using clip and interp
+        enhanced_image = enhanced_image.astype('float')
+
+        normalized_image = np.interp(
+            np.clip(enhanced_image, enhanced_image.min(), enhanced_image.max()), 
+            [enhanced_image.min(), enhanced_image.max()], [0, 65535]).astype('uint16')
+
+
+
         if plot:
             imgs = {
                 "Original Image": input_image,
-                "Enhanced Image": enhanced_image
+                "Enhanced Image": normalized_image
             }
 
             display.plot_figures(imgs, 1,2) 
         
-        return enhanced_image
+        return normalized_image
 
 
 
