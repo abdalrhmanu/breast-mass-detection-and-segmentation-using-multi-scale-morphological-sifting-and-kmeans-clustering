@@ -149,6 +149,10 @@ class MorphologicalSifter:
                     breast_mask_subsampled))
             
         enhanced_image = np.sum(enhanced_image, axis=0)
+        # print(type(enhanced_image)) 
+        # enhanced_image = cv2.UMat(enhanced_image)
+        # enhanced_image = cv2.reduce(enhanced_image, 0, cv2.REDUCE_SUM)
+        # print(enhanced_image.max(), enhanced_image.min())
 
         # applying a grayscale normalization (to 16-bit) on the summation of all the result images generated
         # Perform normalization using clip and interp
