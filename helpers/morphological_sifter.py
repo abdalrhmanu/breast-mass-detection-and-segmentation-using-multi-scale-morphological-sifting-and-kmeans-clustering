@@ -130,10 +130,10 @@ class MorphologicalSifter:
         image_subsampled, breast_mask_subsampled = self._subsample_image(input_image)
         image_normalized = self._normalize(image=image_subsampled, mask=breast_mask_subsampled, astype=8)
 
-        enhanced_image = []
+        enhanced_images = []  
 
         for i in range(1, self.n_scale+1):
-            enhanced_image.append(
+            enhanced_images.append(
                 self._multiscale_morphological_sifter(
                     self.lse[i], 
                     self.lse[i-1], 
@@ -141,21 +141,15 @@ class MorphologicalSifter:
                     image_normalized, 
                     breast_mask_subsampled))
             
-        enhanced_image = np.sum(enhanced_image, axis=0)
-        # print(type(enhanced_image)) 
-        # enhanced_image = cv2.UMat(enhanced_image)
-        # enhanced_image = cv2.reduce(enhanced_image, 0, cv2.REDUCE_SUM)
-        # print(enhanced_image.max(), enhanced_image.min())
+        summed_image = np.sum(enhanced_images, axis=0)
 
         # applying a grayscale normalization (to 16-bit) on the summation of all the result images generated
         # Perform normalization using clip and interp
-        enhanced_image = enhanced_image.astype('float')
+        summed_image = summed_image.astype('float')
 
         normalized_image = np.interp(
-            np.clip(enhanced_image, enhanced_image.min(), enhanced_image.max()), 
-            [enhanced_image.min(), enhanced_image.max()], [0, 65535]).astype('uint16')
-
-
+            np.clip(summed_image, summed_image.min(), summed_image.max()), 
+            [summed_image.min(), summed_image.max()], [0, 65535]).astype('uint16')
 
         if plot:
             imgs = {
@@ -163,9 +157,12 @@ class MorphologicalSifter:
                 "Enhanced Image": normalized_image
             }
 
-            display.plot_figures(imgs, 1,2) 
+            for idx, img in enumerate(enhanced_images):
+                imgs[f"Scale {idx} Output"] = img
+
+            display.plot_figures(imgs, 1,len(imgs)) 
         
-        return normalized_image
+        return normalized_image, enhanced_images, self.lse
 
 
 
