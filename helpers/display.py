@@ -1,4 +1,7 @@
 import matplotlib.pyplot as plt
+import os
+import cv2
+import numpy as np
 
 def plot_figures(figures, nrows = 1, ncols=1):
     """Plot a dictionary of figures.
@@ -16,3 +19,27 @@ def plot_figures(figures, nrows = 1, ncols=1):
         axeslist.ravel()[ind].set_title(title)
         axeslist.ravel()[ind].set_axis_off()
     plt.tight_layout() # optional
+
+def read_img(folder, img_name):
+
+    return cv2.imread(
+        os.path.join(
+            os.path.dirname(f"..\\dataset\\{folder}\\"),
+            img_name
+        ),
+        cv2.IMREAD_GRAYSCALE
+    )
+
+def convert_16_to_8_bit(image):
+    # Ensure that the image is a 16-bit numpy array
+    if not isinstance(image, np.ndarray) or image.dtype != np.uint16:
+        raise ValueError("Input must be a 16-bit numpy array")
+
+    # Normalize the pixel values to [0, 1] range
+    image = image.astype(np.float32)
+    image = image / 65535.0
+
+    # Scale the pixel values to [0, 255] range
+    image = np.round(image * 255).astype(np.uint8)
+
+    return image
