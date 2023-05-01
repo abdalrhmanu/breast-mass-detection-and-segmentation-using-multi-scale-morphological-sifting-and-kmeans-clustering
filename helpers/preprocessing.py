@@ -80,8 +80,8 @@ class Preprocessor:
                         
             for path in tqdm(full_path_dirs[:process_n]):
                 img = cv2.imread(path)
-                self._resized_img = self._resize(img.copy())
-                self._gray_img = self._to_grayscale(self._resized_img)
+                self._gray_img = self._to_grayscale(img)
+                self._resized_img = self._resize(self._gray_img)
                 self._thresholding_mask = self._threshold_mask(self._gray_img)
                 self._contour_img, self._segmented_img = self._find_contours_and_segment(self._gray_img)
                 self._rescaled_img = self._rescale(self._segmented_img)
