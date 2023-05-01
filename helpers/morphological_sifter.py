@@ -90,15 +90,17 @@ class MorphologicalSifter:
         # Get the dimensions of the input image
         m, n = newimage.shape
         
-        # Pad with highest pixel value
-        temp = np.full((m+4*M1, n+4*M1), 65535, dtype=np.uint16)
-        temp[2*M1:(2*M1+m), 2*M1:(2*M1+n)] = newimage
-        
+        # Pad with highest pixel value       
+        temp = np.uint16(65535*np.ones((m+4*M1, n+4*M1)))
+        temp[2*M1:2*M1+m, 2*M1:2*M1+n] = newimage
+
         # Apply multi-scale morphological sifting
         enhanced_image = np.zeros_like(temp)
         for k in range(len(orientation)):
-            B1 = cv2.getStructuringElement(cv2.MORPH_RECT, (M1, 1), (-1, -1))
-            B2 = cv2.getStructuringElement(cv2.MORPH_RECT, (M2, 1), (-1, -1))
+            B1 = cv2.getStructuringElement(cv2.MORPH_RECT, (M1, 1), anchor=(M1//2, 0))
+            # B1 = cv2.rotate(B1, orientation[k])
+            B2 = cv2.getStructuringElement(cv2.MORPH_RECT, (M2, 1), anchor=(M2//2, 0))
+            # B2 = cv2.rotate(B2, orientation[k])
             bg1 = cv2.morphologyEx(temp, cv2.MORPH_OPEN, B1)
             r1 = cv2.subtract(temp, bg1)
             r2 = cv2.morphologyEx(r1, cv2.MORPH_OPEN, B2)
@@ -106,6 +108,7 @@ class MorphologicalSifter:
 
         enhanced_image = enhanced_image[2*M1:2*M1+m, 2*M1:2*M1+n] # Reset the image into the original size
 
+        # Normalization masking
         enhanced_image = (enhanced_image-enhanced_image.min())/(enhanced_image.max()-enhanced_image.min())*255
         enhanced_image = enhanced_image.astype(np.uint8)
         enhanced_image = cv2.bitwise_and(enhanced_image, enhanced_image, mask=breast_mask.astype(np.uint8))
