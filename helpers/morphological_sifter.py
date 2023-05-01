@@ -90,19 +90,12 @@ class MorphologicalSifter:
         # Get the dimensions of the input image
         m, n = newimage.shape
         
-<<<<<<< HEAD
         # Pad with highest pixel value
         #temp = np.full((m+4*M1, n+4*M1), 65535, dtype=np.uint16)
         temp = np.uint16(65535 * np.ones((m+4*M1, n+4*M1)))
         temp[2*M1:(2*M1+m), 2*M1:(2*M1+n)] = newimage
         
         
-=======
-        # Pad with highest pixel value       
-        temp = np.uint16(65535*np.ones((m+4*M1, n+4*M1)))
-        temp[2*M1:2*M1+m, 2*M1:2*M1+n] = newimage
-
->>>>>>> 7b3ff6249e13f227fb2793e36828c9328522ba32
         # Apply multi-scale morphological sifting
         enhanced_image = np.zeros_like(temp)
         for k in range(len(orientation)):
@@ -174,7 +167,7 @@ class MorphologicalSifter:
 
             display.plot_figures(imgs, 1,len(imgs)) 
         
-        return input_image, normalized_image, enhanced_images, self.lse
+        return normalized_image, enhanced_images, self.lse
         
 
 
