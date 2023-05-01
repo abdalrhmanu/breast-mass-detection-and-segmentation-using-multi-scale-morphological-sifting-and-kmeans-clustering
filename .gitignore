@@ -5,6 +5,8 @@ dataset/masks/*
 dataset/overlay/*
 dataset/processed/*
 
+TODO.md
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
