@@ -7,6 +7,8 @@ import time
 from tqdm import tqdm, tqdm_notebook
 import numpy as np
 
+from display import convert_to_16bit
+
 class Preprocessor:
     def __init__(self):
         self._resized_img           = None
@@ -16,7 +18,7 @@ class Preprocessor:
         self._segmented_img         = None
         self._rescaled_img          = None
         self._clahe_img             = None
-        self.scale_factor           = 4
+        self.scale_factor           = 10
 
 
     def _resize(self, images):
@@ -63,6 +65,17 @@ class Preprocessor:
             img = cv2.flip(img, 1)
         
         return img
+    
+    def _add_padding(self, img, path, ratio=1):
+        length, width = img.shape[:2]
+        if length / width > ratio:
+            add_wid = round(length / ratio - width)
+            pad = np.zeros((length, add_wid), dtype=img.dtype)
+            if '_R_' in path:
+                return np.concatenate((pad, img), axis=1)
+            return np.concatenate((img, pad), axis=1)
+        return img
+
         
     def fit(self, dataset_path, process_n = None, plot = False, export_processed = False):
         if isinstance(dataset_path, str):
@@ -81,11 +94,13 @@ class Preprocessor:
             for path in tqdm(full_path_dirs[:process_n]):
                 img = cv2.imread(path)
                 self._gray_img = self._to_grayscale(img)
-                self._resized_img = self._resize(self._gray_img)
+                # self._resized_img = self._resize(self._gray_img)
                 self._thresholding_mask = self._threshold_mask(self._gray_img)
                 self._contour_img, self._segmented_img = self._find_contours_and_segment(self._gray_img)
-                self._rescaled_img = self._rescale(self._segmented_img)
-                self._clahe_img = self._clahe(self._rescaled_img)
+                self._rescaled_img = convert_to_16bit(self._segmented_img)
+                self._padded_img = self._add_padding(self._rescaled_img, path, 1)
+                # self._rescaled_img = self._rescale(self._segmented_img)
+                # self._clahe_img = self._clahe(self._rescaled_img)
                 
                 # Some loggers to help keep track of the process
                 # logger.info(f"Original image shape: {img.shape}")
@@ -102,7 +117,7 @@ class Preprocessor:
                     #     "Contour on Gray Image": contour_image, 
                     #     "Cropped Image (Grayscale Version)": cropped_image, 
                     #     "Rescaled 16-bit":rescaled_img,
-                        "Preprocessed (rescaled, pre-segmented, and enhanced)": self._clahe_img
+                        "Preprocessed": self._padded_img
                     }
 
                     display.plot_figures(imgs, 1,2) 
@@ -110,7 +125,7 @@ class Preprocessor:
                 
                 # Export processed images
                 if export_processed:                
-                    self._export_processed(dataset_path, self._clahe_img, path)
+                    self._export_processed(dataset_path, self._padded_img, path)
 
             logger.info(f"Finished processing {len(full_path_dirs)} files in approximately {(time.time() - start_time):.03f} seconds.")
         else:

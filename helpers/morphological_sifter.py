@@ -11,27 +11,25 @@ from pywt import dwt2
 from tqdm import tqdm, tqdm_notebook
 
 # From helpers directory
-from preprocessing import Preprocessor
 import display
 
 
 class MorphologicalSifter:
     def __init__(self):
-        self.preprocessor = Preprocessor()     
         self.image_dir = os.path.dirname("../dataset/processed/images/")   
         self.overlay_dir = os.path.dirname("../dataset/processed/overlay/") 
         self.area_min = 15
         self.area_max = 3689
         self.mass_size_range = [self.area_min, self.area_max] # square mm
         self.pixel_size = 0.07 # spatial resolution of the INbreast mammograms, 0.07mm
-        self.resize_ratio = 1 / self.preprocessor.scale_factor
+        self.resize_ratio = 1 / 10
         self.n_scale = 2
         self.n_lse_elements = 18
         self.lse = None
         self.angle_range = None
         self.mass_diameter_range_pixel = \
             [math.floor((self.mass_size_range[0]/math.pi)**0.5*2/(self.pixel_size/self.resize_ratio)),
-                                    math.ceil((self.mass_size_range[1]/math.pi)**0.5*2/(self.pixel_size/self.resize_ratio))]  # diameter range in pixels
+            math.ceil((self.mass_size_range[1]/math.pi)**0.5*2/(self.pixel_size/self.resize_ratio))]  # diameter range in pixels
         
     def _subsample_image(self, image):
         # Image subsampling using 2 level db2 wavelet
@@ -62,7 +60,8 @@ class MorphologicalSifter:
         scale_interval = (D[1] / D[0]) ** (1 / Num_scale)
         len_bank = np.zeros(Num_scale + 1, dtype=int)
         for l in range(Num_scale + 1):
-            len_bank[l] = int(D[0] * (scale_interval ** (l - 1)))
+            # len_bank[l] = round(D[0] * (scale_interval ** (l - 1)))
+            len_bank[l] = round(D[0] * (scale_interval ** (l)))
         len_bank[Num_scale] = D[1]
 
         return len_bank
@@ -83,37 +82,45 @@ class MorphologicalSifter:
         
         return image
     
-    def _multiscale_morphological_sifter(self, M1, M2, orientation, image, breast_mask):
-        # Create a copy of the input image
-        newimage = np.copy(image)
-        
-        # Get the dimensions of the input image
+    def _multiscale_morphological_sifter(self, M1, M2, orientation, image, breast_mask, L_OR_R, padding_option):
+        # Create a copy of the input image        
+        newimage = image.copy()
         m, n = newimage.shape
-        
-        # Pad with highest pixel value
-        #temp = np.full((m+4*M1, n+4*M1), 65535, dtype=np.uint16)
-        temp = np.uint16(65535 * np.ones((m+4*M1, n+4*M1)))
-        temp[2*M1:(2*M1+m), 2*M1:(2*M1+n)] = newimage
-        
+
+        ## Border effect control: border padding
+        # Option 1: pad with highest pixel value
+        temp = np.full((m + 4 * M1, n + 4 * M1), 65535, dtype=np.uint16)
+        temp[2 * M1:2 * M1 + m, 2 * M1:2 * M1 + n] = newimage  # Add white margins to each side of the image to prevent edge effect of morphological process
+
+
+        # Option 2: replicate the pixels on the border
+        if padding_option == 1:
+            if L_OR_R == 1:  # left breast
+                edge = newimage[:, :min(n, 2 * M1)]
+                temp[2 * M1:2 * M1 + m, 2 * M1 - edge.shape[1]:2 * M1] = np.fliplr(edge)
+            else:  # right breast
+                edge = newimage[:, max(1, n - 2 * M1 + 1) - 1:n]
+                temp[2 * M1:2 * M1 + m, n + 2 * M1:n + 2 * M1 + edge.shape[1]] = np.fliplr(edge)
         
         # Apply multi-scale morphological sifting
-        enhanced_image = np.zeros_like(temp)
+        enhanced_image = np.zeros(temp.shape, dtype=np.float32)
         for k in range(len(orientation)):
-            B1 = cv2.getStructuringElement(cv2.MORPH_RECT, (M1, 1), anchor=(M1//2, 0))
+            B1 = cv2.getStructuringElement(cv2.MORPH_RECT, (M1, 1), anchor=(0, 0))
             # B1 = cv2.rotate(B1, orientation[k])
-            B2 = cv2.getStructuringElement(cv2.MORPH_RECT, (M2, 1), anchor=(M2//2, 0))
+            B2 = cv2.getStructuringElement(cv2.MORPH_RECT, (M2, 1), anchor=(0, 0))
             # B2 = cv2.rotate(B2, orientation[k])
             bg1 = cv2.morphologyEx(temp, cv2.MORPH_OPEN, B1)
             r1 = cv2.subtract(temp, bg1)
             r2 = cv2.morphologyEx(r1, cv2.MORPH_OPEN, B2)
             enhanced_image = enhanced_image + r2.astype(np.float64)
 
-        enhanced_image = enhanced_image[2*M1:2*M1+m, 2*M1:2*M1+n] # Reset the image into the original size
+        enhanced_image = enhanced_image[2 * M1:2 * M1 + m, 2 * M1:2 * M1 + n]  # Reset the image into the original size
 
         # Normalization masking
-        enhanced_image = (enhanced_image-enhanced_image.min())/(enhanced_image.max()-enhanced_image.min())*255
-        enhanced_image = enhanced_image.astype(np.uint8)
-        enhanced_image = cv2.bitwise_and(enhanced_image, enhanced_image, mask=breast_mask.astype(np.uint8))
+        enhanced_image = self._normalize(enhanced_image, breast_mask, 8)
+
+        # Crop the white margins from the bottom of the enhanced image
+        enhanced_image = enhanced_image[:m, :n]
         
         return enhanced_image
 
@@ -128,23 +135,34 @@ class MorphologicalSifter:
 
         if input_image is None:
             raise ValueError("Image doesn't exist.")
-
+        
         self.lse = self._linear_structuring_elements(self.n_scale, self.mass_diameter_range_pixel)
-        self.angle_range = list(range(0, 190, self.n_lse_elements))
+        self.angle_range = list(range(0, 180, 10))
 
         image_subsampled, breast_mask_subsampled = self._subsample_image(input_image)
-        image_normalized = self._normalize(image=image_subsampled, mask=breast_mask_subsampled, astype=8)
+        image_normalized = self._normalize(image_subsampled, breast_mask_subsampled,8)
 
         enhanced_images = []  
+        
+        L_OR_R = 0 if '_R_' in image_input_name else 1 # check if it is a left or right breast
+        CC_OR_ML = 1 if '_CC_' in image_input_name else 0
 
-        for i in range(1, self.n_scale+1):
+        for j in range(1, self.n_scale+1):
+            # Boundary padding
+            padding_mode = 1
+            if j==1 or CC_OR_ML==1:
+                # if it is a small scale or it is a MLO view
+                padding_mode = 0  # highest value padding
+
             enhanced_images.append(
                 self._multiscale_morphological_sifter(
-                    self.lse[i], 
-                    self.lse[i-1], 
+                    self.lse[j], 
+                    self.lse[j-1], 
                     self.angle_range, 
                     image_normalized, 
-                    breast_mask_subsampled))
+                    breast_mask_subsampled,
+                    L_OR_R,
+                    padding_mode))
             
         summed_image = np.sum(enhanced_images, axis=0)
 
@@ -155,6 +173,7 @@ class MorphologicalSifter:
         normalized_image = np.interp(
             np.clip(summed_image, summed_image.min(), summed_image.max()), 
             [summed_image.min(), summed_image.max()], [0, 65535]).astype('uint16')
+        
 
         if plot:
             imgs = {

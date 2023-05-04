@@ -43,3 +43,14 @@ def convert_16_to_8_bit(image):
     image = np.round(image * 255).astype(np.uint8)
 
     return image
+
+
+def convert_to_16bit(img):
+    # Check if the image is already 16-bit
+    if img.dtype == "uint16":
+        return img
+    else:
+        # Convert the image to 16-bit
+        img_16bit = (img.astype(np.float32) / 255.0 * 65535.0).astype(np.uint16)
+        return img_16bit
+
