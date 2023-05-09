@@ -4,6 +4,8 @@ dataset/images/*
 dataset/masks/*
 dataset/overlay/*
 dataset/processed/*
+dataset/negative_images/*
+dataset/positive_images/*
 
 TODO.md
 
