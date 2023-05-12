@@ -6,6 +6,7 @@ dataset/overlay/*
 dataset/processed/*
 dataset/negative_images/*
 dataset/positive_images/*
+dataset/output/*
 
 TODO.md
 
