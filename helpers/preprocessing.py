@@ -127,17 +127,18 @@ class Preprocessor:
                 # Displaying some results for validation
                 if plot:
                     imgs = {
-                        "Original": img, 
+                        f"Original {img.shape[0]}x{img.shape[1]}": img, 
                     #     "Threshold Mask": thresholding_mask, 
                     #     "Contour on Gray Image": contour_image, 
                     #     "Cropped Image (Grayscale Version)": cropped_image, 
                     #     "Rescaled 16-bit":rescaled_img,
                         # "_resized_img": self._resized_img,
-                        "GT Cropped": self._gt_img,
-                        "Preprocessed": self._rescaled_img
+                        f"GT {gt_img.shape[0]}x{gt_img.shape[1]}": gt_img,
+                        f"GT Cropped {self._gt_img.shape[0]}x{self._gt_img.shape[1]}": self._gt_img,
+                        f"Preprocessed {self._rescaled_img.shape[0]}x{self._rescaled_img.shape[1]}": self._rescaled_img
                     }
 
-                    display.plot_figures(imgs, 1,3) 
+                    display.plot_figures(imgs, 2,2) 
 
                 
                 # Export processed images
