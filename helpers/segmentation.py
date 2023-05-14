@@ -13,10 +13,13 @@ from tqdm import tqdm, tqdm_notebook
 # From helpers directory
 import display
 
+from sklearn.cluster import KMeans
+import warnings
 
 class Segmentation:
     def __init__(self):
-        pass
+        warnings.filterwarnings("ignore", category=FutureWarning)
+
 
     def mean_shift_filter(self, image, spatial_radius, range_radius):
         """
@@ -86,3 +89,51 @@ class Segmentation:
         result = cv2.morphologyEx(result, cv2.MORPH_OPEN, kernel)
 
         return result
+
+    def slico(self, img):
+        # Apply Superpixel SLIC algorithm
+        algo = cv2.ximgproc.createSuperpixelSLIC(img, cv2.ximgproc.SLICO, 10)
+        algo.iterate(10)
+
+        # Get labels and number of superpixels
+        labels = algo.getLabels()
+        num_superpixels = algo.getNumberOfSuperpixels()
+
+        # Calculate superpixel means
+        superpixel_means = np.zeros((num_superpixels, 3))
+        for k in range(num_superpixels):
+            mask = (labels == k).astype('uint8')
+            superpixel_means[k] = cv2.mean(img, mask)[:3]
+
+        # Calculate superpixel areas
+        # superpixel_areas = np.bincount(labels.flatten())
+
+        return superpixel_means, num_superpixels, labels
+    
+
+    def kmeans (self, img):
+
+        superpixel_means, num_superpixels, labels = self.slico(img)
+
+        # Perform k-means clustering on the superpixel means
+        kmeans = KMeans(n_clusters=3)  # Replace K with the desired number of clusters
+        kmeans.fit(superpixel_means)
+        cluster_labels = kmeans.labels_
+
+        # Replace original image pixels with cluster means
+        img_clustered = img.copy()
+        for k in range(num_superpixels):
+            mask = (labels == k).astype('uint8')
+            cluster_label = cluster_labels[k]
+            cluster_mean = kmeans.cluster_centers_[cluster_label]
+
+            img_clustered[mask > 0] = cluster_mean
+
+        # Binarize the clustered region images using thresholding
+        gray_clustered = cv2.cvtColor(img_clustered, cv2.COLOR_BGR2GRAY)
+
+        _, binary_image = cv2.threshold(gray_clustered, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+
+        return binary_image
+
+
