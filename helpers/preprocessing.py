@@ -21,24 +21,44 @@ class Preprocessor:
         self._clahe_img             = None
         self.scale_factor           = 4
 
+    def crop_raw(self, image):
+        raw_threshold   = self._threshold_mask(image)
+
+        contours, _ = cv2.findContours(raw_threshold.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        largest_contour = max(contours, key=cv2.contourArea)
+        x, y, w, h = cv2.boundingRect(largest_contour)
+
+        cropped_image = image.copy()[y:y+h, x:x+w]
+
+        # We have to resize as we resized in the pre-processed image. The scale factor removes floating point after the 
+        # rescaling from the dimensions making the mask and segmentation sizes different.
+        # Once rescaled, it will match the sizes 
+        cropped_image = cv2.resize(cropped_image, None, fx=1/self.scale_factor, fy=1/self.scale_factor, interpolation=cv2.INTER_CUBIC)
+        
+        return cropped_image
 
     def _resize(self, images, gt_img):
         # logger.info(f"Resizing with a scale factor {self.scale_factor} INTER_CUBIC interpolation.")
-        img = cv2.resize(images.copy(), None, fx=1/self.scale_factor, fy=1/self.scale_factor, interpolation=cv2.INTER_CUBIC)
-        gt  = cv2.resize(gt_img.copy(), None, fx=1/self.scale_factor, fy=1/self.scale_factor, interpolation=cv2.INTER_CUBIC)
+        img = cv2.resize(images, None, fx=1/self.scale_factor, fy=1/self.scale_factor, interpolation=cv2.INTER_CUBIC)
+        gt  = cv2.resize(gt_img, None, fx=1/self.scale_factor, fy=1/self.scale_factor, interpolation=cv2.INTER_CUBIC)
         return img, gt
     
     def _to_grayscale(self, images):
         return cv2.cvtColor(images.copy(), cv2.COLOR_BGR2GRAY)        
     
     def _threshold_mask(self, images):
-        return cv2.threshold(images.copy(), 30, 255, cv2.THRESH_BINARY)[1]
+        blur = cv2.GaussianBlur(images.copy(), (5,5), 0)
+        return cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
     
     def _find_contours_and_segment(self, images, gt_img):
-        contours, _ = cv2.findContours(self._thresholding_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        contours, _ = cv2.findContours(self._thresholding_mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         largest_contour = max(contours, key=cv2.contourArea)
         x, y, w, h = cv2.boundingRect(largest_contour)
+        
+
         contour_image = cv2.drawContours(images.copy(), [largest_contour], -1, (255, 255, 255), 3)
+
         cropped_image = images.copy()[y:y+h, x:x+w]
         cropped_gt = gt_img.copy()[y:y+h, x:x+w]
 
@@ -48,7 +68,8 @@ class Preprocessor:
         return cv2.normalize(images.copy(), None, 0, 255, cv2.NORM_MINMAX)
     
     def _clahe(self, images):
-        clahe = cv2.createCLAHE(clipLimit=0.01, tileGridSize=(4,4))
+        # clahe = cv2.createCLAHE(clipLimit=0.01, tileGridSize=(4,4))
+        clahe = cv2.createCLAHE(clipLimit=8, tileGridSize=(4,4))
         return clahe.apply(images.copy())
     
     def _export_processed(self, dir, gt_dir, img_processed, gt_img, img_path):
@@ -89,6 +110,28 @@ class Preprocessor:
             return np.concatenate((img, pad), axis=1)
         return img
 
+    def upsample(self, image, export_upsampled, dir, type):
+        # Compute the new size for upsampling
+        height, width = image.shape[:2]
+        new_height = int(height * self.scale_factor)
+        new_width = int(width * self.scale_factor)
+
+        # Perform upsampling using resize
+        upsampled_image = cv2.resize(image.copy(), (new_width, new_height), interpolation=cv2.INTER_CUBIC)
+
+        # Export processed images
+        if export_upsampled:     
+            upsample_dir = f'../dataset/output/upsampled/{type}'
+            upsample_img_dir = os.path.join(upsample_dir, dir.split('\\')[1])
+            # print(upsample_img_dir)
+            if not os.path.isdir(upsample_dir):
+                os.makedirs(upsample_dir)
+                logger.info(f"New directory created '{upsample_dir}'")
+
+            cv2.imwrite(upsample_img_dir ,upsampled_image)
+
+        return upsampled_image
+
         
     def fit(self, dataset_path, ground_truth_path, process_n = None, plot = False, export_processed = False):
         if isinstance(dataset_path, str):
@@ -107,16 +150,27 @@ class Preprocessor:
             for path in tqdm(full_path_dirs[:process_n]):
                 gt_path = os.path.join(ground_truth_path ,path.split('\\')[-1]) 
 
-                img = cv2.imread(path)
-                gt_img = cv2.imread(gt_path)
+                img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+                # print(img.shape, img.dtype)
+                gt_img = cv2.imread(gt_path, cv2.IMREAD_UNCHANGED)
 
-                self._gray_img = self._to_grayscale(img)
-                self._resized_img, self._gt_img = self._resize(self._gray_img, gt_img)
-                self._thresholding_mask = self._threshold_mask(self._resized_img)
-                self._contour_img, self._segmented_img, self._gt_img = self._find_contours_and_segment(self._resized_img, self._gt_img)
-                self._rescaled_img = self._rescale(self._segmented_img)
-                self._clahe_img = self._clahe(self._rescaled_img)
+                self._gray_img = img
+                self._thresholding_mask = self._threshold_mask(self._gray_img)
+                # print(self._thresholding_mask)
+                self._contour_img, self._segmented_img, self._gt_img = self._find_contours_and_segment(self._gray_img, gt_img)
+                # self._rescaled_img = self._rescale(self._segmented_img)
+                self._clahe_img = self._clahe(self._segmented_img)
                 
+                self._resized_img, self._gt_img = self._resize(self._clahe_img, self._gt_img)
+                
+                # Convert resized_img to uint16
+                self._resized_img = self._resized_img.astype(np.uint16)
+                self._gt_img = self._gt_img.astype(np.uint8)
+
+                # print(self._resized_img.shape, self._resized_img.dtype)
+                # print(self._gt_img.shape, self._gt_img.dtype)
+
+
                 # Some loggers to help keep track of the process
                 # logger.info(f"Original image shape: {img.shape}")
                 # logger.info(f"Resized image shape: {self._resized_img.shape}.")
@@ -128,14 +182,14 @@ class Preprocessor:
                 if plot:
                     imgs = {
                         f"Original {img.shape[0]}x{img.shape[1]}": img, 
-                    #     "Threshold Mask": thresholding_mask, 
+                        # "Threshold Mask": self._thresholding_mask, 
                     #     "Contour on Gray Image": contour_image, 
                     #     "Cropped Image (Grayscale Version)": cropped_image, 
                     #     "Rescaled 16-bit":rescaled_img,
                         # "_resized_img": self._resized_img,
                         f"GT {gt_img.shape[0]}x{gt_img.shape[1]}": gt_img,
                         f"GT Cropped {self._gt_img.shape[0]}x{self._gt_img.shape[1]}": self._gt_img,
-                        f"Preprocessed {self._rescaled_img.shape[0]}x{self._rescaled_img.shape[1]}": self._rescaled_img
+                        f"Preprocessed {self._resized_img.shape[0]}x{self._resized_img.shape[1]}": self._resized_img
                     }
 
                     display.plot_figures(imgs, 2,2) 
@@ -143,7 +197,7 @@ class Preprocessor:
                 
                 # Export processed images
                 if export_processed:                
-                    self._export_processed(dataset_path, ground_truth_path, self._rescaled_img, self._gt_img, path)
+                    self._export_processed(dataset_path, ground_truth_path, self._resized_img, self._gt_img, path)
 
             logger.info(f"Finished processing {len(full_path_dirs)} files in approximately {(time.time() - start_time):.03f} seconds.")
         else:
