@@ -16,14 +16,14 @@ import display
 
 class MorphologicalSifter:
     def __init__(self):
-        self.image_dir = os.path.dirname("../dataset/processed/images/")   
-        self.overlay_dir = os.path.dirname("../dataset/processed/overlay/") 
+        self.image_dir = os.path.dirname(r"..\\dataset\\processed\\positive_images\\")   
+        self.overlay_dir = os.path.dirname(r"../dataset/processed/overlay/") 
         self.area_min = 15
         self.area_max = 3689
         self.mass_size_range = [self.area_min, self.area_max] # square mm
         self.pixel_size = 0.07 # spatial resolution of the INbreast mammograms, 0.07mm
-        self.resize_ratio = 1 / 10
-        self.n_scale = 4
+        self.resize_ratio = 1 / 4
+        self.n_scale = 10
         self.n_lse_elements = 18
         self.lse = None
         self.angle_range = None
@@ -132,7 +132,7 @@ class MorphologicalSifter:
             input_image = cv2.imread(os.path.join(self.overlay_dir, image_input_name))
         else:
             input_image = cv2.imread(os.path.join(self.image_dir, image_input_name))
-
+        # print(input_image)
         if input_image is None:
             raise ValueError("Image doesn't exist.")
         
