@@ -22,14 +22,8 @@ class FeatureExtractor:
         glcm = graycomatrix(gray_image, distances, angles, levels=256, symmetric=True, normed=True)
         
         # Extract texture features from GLCM matrix
-        contrast = graycoprops(glcm, 'contrast')
-        dissimilarity = graycoprops(glcm, 'dissimilarity')
-        homogeneity = graycoprops(glcm, 'homogeneity')
-        energy = graycoprops(glcm, 'energy')
-        correlation = graycoprops(glcm, 'correlation')
-        
-        # Concatenate features into a single feature vector
-        texture_features = np.concatenate([contrast.ravel(), dissimilarity.ravel(), homogeneity.ravel(), energy.ravel(), correlation.ravel()])
+        features = ['contrast', 'dissimilarity', 'homogeneity', 'energy', 'correlation', 'ASM']
+        texture_features = np.concatenate([graycoprops(glcm, feature).ravel() for feature in features])
         
         return texture_features
 
@@ -82,7 +76,7 @@ class FeatureExtractor:
             # Add mean and standard deviation to feature vector
             intensity_features.append([mean_intensity, std_intensity])
             
-        intensity_features = np.array(intensity_features)
+        intensity_features = np.concatenate(intensity_features)
         
         return intensity_features
     
