@@ -141,6 +141,7 @@ class Segmentation:
             data = data.reshape(1, -1)
 
             # do kmeans
+            # Tyry higher k > 2 - K=2 is binarization
             _, labels, centers = cv2.kmeans(
                 data, 2, None,
                 criteria=(cv2.TERM_CRITERIA_MAX_ITER + cv2.TERM_CRITERIA_EPS, 10, 1.0),

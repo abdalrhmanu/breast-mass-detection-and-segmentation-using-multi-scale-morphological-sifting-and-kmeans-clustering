@@ -40,7 +40,11 @@ class Preprocessor:
     def _resize(self, images, gt_img):
         # logger.info(f"Resizing with a scale factor {self.scale_factor} INTER_CUBIC interpolation.")
         img = cv2.resize(images, None, fx=1/self.scale_factor, fy=1/self.scale_factor, interpolation=cv2.INTER_CUBIC)
-        gt  = cv2.resize(gt_img, None, fx=1/self.scale_factor, fy=1/self.scale_factor, interpolation=cv2.INTER_CUBIC)
+        
+        if(gt_img is not None):
+            gt  = cv2.resize(gt_img, None, fx=1/self.scale_factor, fy=1/self.scale_factor, interpolation=cv2.INTER_CUBIC)
+        else:
+            gt = None
         return img, gt
     
     def _to_grayscale(self, images):
@@ -60,7 +64,11 @@ class Preprocessor:
         contour_image = cv2.drawContours(images.copy(), [largest_contour], -1, (255, 255, 255), 3)
 
         cropped_image = images.copy()[y:y+h, x:x+w]
-        cropped_gt = gt_img.copy()[y:y+h, x:x+w]
+        
+        if(gt_img is not None):
+            cropped_gt = gt_img.copy()[y:y+h, x:x+w]
+        else:
+            cropped_gt = None
 
         return contour_image, cropped_image, cropped_gt
     
@@ -76,19 +84,22 @@ class Preprocessor:
         folder_directory = os.path.join('..', dir.split('\\')[1], 'processed', dir.split('\\')[2])
         file_directory = os.path.join(folder_directory, img_path.split('\\')[-1])
 
-        folder_directory_gt = os.path.join('..', gt_dir.split('\\')[1], 'processed', gt_dir.split('\\')[2])
-        file_directory_gt = os.path.join(folder_directory_gt, img_path.split('\\')[-1])
-
         if not os.path.isdir(folder_directory):
             os.makedirs(folder_directory)
             logger.info(f"New directory created '{folder_directory}'")
-        
-        if not os.path.isdir(folder_directory_gt):
-            os.makedirs(folder_directory_gt)
-            logger.info(f"New directory created '{folder_directory_gt}'")
 
         cv2.imwrite(file_directory ,img_processed)
-        cv2.imwrite(file_directory_gt ,gt_img)
+
+        
+        if(gt_img is not None):
+            folder_directory_gt = os.path.join('..', gt_dir.split('\\')[1], 'processed', gt_dir.split('\\')[2])
+            file_directory_gt = os.path.join(folder_directory_gt, img_path.split('\\')[-1])
+
+            if not os.path.isdir(folder_directory_gt):
+                os.makedirs(folder_directory_gt)
+                logger.info(f"New directory created '{folder_directory_gt}'")
+
+            cv2.imwrite(file_directory_gt ,gt_img)
 
 
     def _flip_breast(self, img):
@@ -165,7 +176,9 @@ class Preprocessor:
                 
                 # Convert resized_img to uint16
                 self._resized_img = self._resized_img.astype(np.uint16)
-                self._gt_img = self._gt_img.astype(np.uint8)
+
+                if(self._gt_img is not None):
+                    self._gt_img = self._gt_img.astype(np.uint8)
 
                 # print(self._resized_img.shape, self._resized_img.dtype)
                 # print(self._gt_img.shape, self._gt_img.dtype)
@@ -187,12 +200,12 @@ class Preprocessor:
                     #     "Cropped Image (Grayscale Version)": cropped_image, 
                     #     "Rescaled 16-bit":rescaled_img,
                         # "_resized_img": self._resized_img,
-                        f"GT {gt_img.shape[0]}x{gt_img.shape[1]}": gt_img,
-                        f"GT Cropped {self._gt_img.shape[0]}x{self._gt_img.shape[1]}": self._gt_img,
+                        # f"GT {gt_img.shape[0]}x{gt_img.shape[1]}": gt_img,
+                        # f"GT Cropped {self._gt_img.shape[0]}x{self._gt_img.shape[1]}": self._gt_img,
                         f"Preprocessed {self._resized_img.shape[0]}x{self._resized_img.shape[1]}": self._resized_img
                     }
 
-                    display.plot_figures(imgs, 2,2) 
+                    display.plot_figures(imgs, 1,2) 
 
                 
                 # Export processed images
