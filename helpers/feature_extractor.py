@@ -42,14 +42,43 @@ class FeatureExtractor:
             mask[labels == label] = 255
             
             # Calculate moments of superpixel
-            m = moments(mask)
+            m = cv2.moments(mask)
             
             # Calculate Hu Moments of superpixel
-            hu_moments = moments_hu(m)
+            hu_moments = cv2.HuMoments(m)
             hu_moments = np.ravel(hu_moments)
             
             # Add Hu Moments to feature vector
             shape_features.append(hu_moments)
+
+            # Calculate additional shape features
+            # Area
+            area = m["m00"]
+            
+            # Perimeter
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            perimeter = cv2.arcLength(contours[0], True)
+            
+            # Bounding box dimensions
+            x, y, w, h = cv2.boundingRect(contours[0])
+            
+            # Aspect ratio (width/height)
+            aspect_ratio = float(w) / h
+            
+            # Extent (contour area / bounding box area)
+            bounding_box_area = w * h
+            extent = float(area) / bounding_box_area
+            
+            # Solidity (contour area / convex hull area)
+            convex_hull = cv2.convexHull(contours[0])
+            convex_hull_area = cv2.contourArea(convex_hull)
+            solidity = float(area) / convex_hull_area
+            
+            # Compactness (perimeter^2 / contour area)
+            compactness = (perimeter ** 2) / area
+            
+            # Add all features to the feature vector
+            shape_features.append(np.concatenate([hu_moments, [area, perimeter, aspect_ratio, extent, solidity, compactness]]))
         
         # Concatenate features into a single feature vector
         shape_features = np.concatenate(shape_features)
