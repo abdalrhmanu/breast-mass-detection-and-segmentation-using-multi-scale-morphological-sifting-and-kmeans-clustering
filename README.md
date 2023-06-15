@@ -1,7 +1,7 @@
-# <h1 align="center">Mammogram Mass Detection</h1>
+# <h1 align="center">Mammogram Mass Detection and Segmentation using Multi-scale Morphological Sifting and K-means Clustering</h1>
 
 
-This repository holds the source code for the project of mammogram mass detection. All source code is kept private until the project is finalized, where this README file will be updated constantly.
+![alt text](https://github.com/abdalrhmanu/mammographic-breast-mass-detection-and-segmentation/blob/main/report/report_images/visualize_segmentation/segmentation_results_cropped.png?raw=true)
 
 Setup Environment Locally
 ============
