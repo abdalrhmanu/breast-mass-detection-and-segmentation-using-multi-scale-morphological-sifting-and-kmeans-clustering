@@ -10,6 +10,10 @@ dataset/output/*
 server.md
 dataset/ml_runs/* 
 
+demonestration/dataset/processed
+demonestration/dataset/cropped_raw
+demonestration/dataset/output
+
 TODO.md
 
 # Byte-compiled / optimized / DLL files
