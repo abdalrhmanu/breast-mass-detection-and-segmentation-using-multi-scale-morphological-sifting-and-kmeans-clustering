@@ -81,7 +81,7 @@ class Preprocessor:
         return clahe.apply(images.copy())
     
     def _export_processed(self, dir, gt_dir, img_processed, gt_img, img_path):
-        folder_directory = os.path.join('..', dir.split('\\')[1], 'processed', dir.split('\\')[2])
+        folder_directory = os.path.join(dir.split('\\')[0], dir.split('\\')[1], 'processed', dir.split('\\')[2])
         file_directory = os.path.join(folder_directory, img_path.split('\\')[-1])
 
         if not os.path.isdir(folder_directory):
@@ -92,7 +92,7 @@ class Preprocessor:
 
         
         if(gt_img is not None):
-            folder_directory_gt = os.path.join('..', gt_dir.split('\\')[1], 'processed', gt_dir.split('\\')[2])
+            folder_directory_gt = os.path.join(dir.split('\\')[0], gt_dir.split('\\')[1], 'processed', gt_dir.split('\\')[2])
             file_directory_gt = os.path.join(folder_directory_gt, img_path.split('\\')[-1])
 
             if not os.path.isdir(folder_directory_gt):
@@ -142,7 +142,24 @@ class Preprocessor:
             cv2.imwrite(upsample_img_dir ,upsampled_image)
 
         return upsampled_image
+    
+    def save_image(self, image, save_directory, image_filename):
+        try:
+            # Create the save directory if it doesn't exist
+            os.makedirs(save_directory, exist_ok=True)
+            
+            # Save the image to the specified directory
+            save_path = os.path.join(save_directory, image_filename)
+            cv2.imwrite(save_path, image)
+            
+            print(f"Image saved successfully to: {save_path}")
+        except Exception as e:
+            print(f"Error saving image: {str(e)}")
 
+    def prepare_export(self, image):
+        image = image.astype(np.float32)
+        image_uint8 = cv2.convertScaleAbs(image / np.max(image) * 255)
+        return cv2.cvtColor(image_uint8, cv2.COLOR_GRAY2BGR)
         
     def fit(self, dataset_path, ground_truth_path, process_n = None, plot = False, export_processed = False):
         if isinstance(dataset_path, str):
@@ -162,20 +179,30 @@ class Preprocessor:
                 gt_path = os.path.join(ground_truth_path ,path.split('\\')[-1]) 
 
                 img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+                # self.save_image(img, r'../report/report_images/preprocessing/', 'original.tif')
+
                 # print(img.shape, img.dtype)
                 gt_img = cv2.imread(gt_path, cv2.IMREAD_UNCHANGED)
 
+
                 self._gray_img = img
                 self._thresholding_mask = self._threshold_mask(self._gray_img)
+                # self.save_image(self._thresholding_mask, r'../report/report_images/preprocessing/', 'thresholding_mask.jpg')
+
                 # print(self._thresholding_mask)
                 self._contour_img, self._segmented_img, self._gt_img = self._find_contours_and_segment(self._gray_img, gt_img)
+                # self.save_image(self._segmented_img, r'../report/report_images/preprocessing/', 'segmented_img.tif')
+
                 # self._rescaled_img = self._rescale(self._segmented_img)
                 self._clahe_img = self._clahe(self._segmented_img)
-                
+                # self.save_image(self._clahe_img, r'../report/report_images/preprocessing/', 'clahe_img.tif')
+
                 self._resized_img, self._gt_img = self._resize(self._clahe_img, self._gt_img)
                 
                 # Convert resized_img to uint16
                 self._resized_img = self._resized_img.astype(np.uint16)
+                # self.save_image(self._resized_img, r'../report/report_images/preprocessing/', 'final_resized.tif')
+
 
                 if(self._gt_img is not None):
                     self._gt_img = self._gt_img.astype(np.uint8)
@@ -195,9 +222,9 @@ class Preprocessor:
                 if plot:
                     imgs = {
                         f"Original {img.shape[0]}x{img.shape[1]}": img, 
-                        # "Threshold Mask": self._thresholding_mask, 
-                    #     "Contour on Gray Image": contour_image, 
-                    #     "Cropped Image (Grayscale Version)": cropped_image, 
+                        "Threshold Mask": self._thresholding_mask, 
+                        "Segmented image on thresh mask": self._segmented_img, 
+                        "_clahe_img": self._clahe_img, 
                     #     "Rescaled 16-bit":rescaled_img,
                         # "_resized_img": self._resized_img,
                         # f"GT {gt_img.shape[0]}x{gt_img.shape[1]}": gt_img,
@@ -205,7 +232,7 @@ class Preprocessor:
                         f"Preprocessed {self._resized_img.shape[0]}x{self._resized_img.shape[1]}": self._resized_img
                     }
 
-                    display.plot_figures(imgs, 1,2) 
+                    display.plot_figures(imgs, 1,5) 
 
                 
                 # Export processed images

@@ -87,16 +87,16 @@ class FeatureExtractor:
         return shape_features
 
     def extract_intensity_features(self, image, labels):
-         
+        # average intenssity and standard dev in the mass here <- easy features
+
         if not isinstance(image, np.ndarray) or image.dtype != np.uint8:
             raise ValueError("Input must be a 8-bit numpy array")
         
         # Initialize feature vector
         intensity_features = []
-        
-        # Loop over each superpixel
+
         for label in np.unique(labels):
-            # Extract pixel values of superpixel
+            # Extract pixel values
             pixels = image[labels == label]
                     
             # Calculate mean and standard deviation of pixel intensities
@@ -155,4 +155,5 @@ class FeatureExtractor:
                 features.extend(hist)
         
         return np.array(features)
+    
     

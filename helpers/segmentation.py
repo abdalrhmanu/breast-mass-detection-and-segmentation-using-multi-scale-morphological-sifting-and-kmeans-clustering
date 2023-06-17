@@ -7,6 +7,7 @@ import numpy as np
 import math
 
 from morphological_sifter import MorphologicalSifter
+from preprocessing import Preprocessor
 
 from functools import reduce
 from pywt import dwt2
@@ -22,6 +23,7 @@ class Segmentation:
     def __init__(self):
         warnings.filterwarnings("ignore", category=FutureWarning)
         self.mms = MorphologicalSifter()
+        self.preprocessor = Preprocessor()
 
 
     def slico(self, img):
@@ -44,7 +46,6 @@ class Segmentation:
 
         return superpixel_means, num_superpixels, labels
     
-    # Highest! 0.7094017094017094
     def mean_shift_filter(self, image, spatial_radius=15, range_radius=60):
         """
         Apply mean shift filter to a grayscale image.
@@ -175,6 +176,12 @@ class Segmentation:
         
         sifted_image = self.mms.multi_scale_morphological_sifters(input_image,10,18,15,3689,70/1000)
 
+        # self.preprocessor.save_image(self.preprocessor.prepare_export(sifted_image[2]), r'../report/report_images/mms/', 'sifted_image_2.jpg')
+        # self.preprocessor.save_image(self.preprocessor.prepare_export(sifted_image[3]), r'../report/report_images/mms/', 'sifted_image_3.jpg')
+        # self.preprocessor.save_image(self.preprocessor.prepare_export(sifted_image[4]), r'../report/report_images/mms/', 'sifted_image_4.jpg')
+        # self.preprocessor.save_image(self.preprocessor.prepare_export(sifted_image[5]), r'../report/report_images/mms/', 'sifted_image_5.jpg')
+        # self.preprocessor.save_image(self.preprocessor.prepare_export(sifted_image[9]), r'../report/report_images/mms/', 'sifted_image_9.jpg')
+
         # Apply the mean shift filtering to the different scales of sifted images
         mean_shifted_image_0 = self.mean_shift_filter(sifted_image[0])
         mean_shifted_image_1 = self.mean_shift_filter(sifted_image[1])
@@ -186,6 +193,15 @@ class Segmentation:
         mean_shifted_image_7 = self.mean_shift_filter(sifted_image[7])
         mean_shifted_image_8 = self.mean_shift_filter(sifted_image[8])
         mean_shifted_image_9 = self.mean_shift_filter(sifted_image[9])
+
+        # self.preprocessor.save_image(mean_shifted_image_2, r'../report/report_images/mean_shift_filter/', 'mean_shifted_image_2.tif')
+        # self.preprocessor.save_image(mean_shifted_image_3, r'../report/report_images/mean_shift_filter/', 'mean_shifted_image_3.tif')
+        # self.preprocessor.save_image(mean_shifted_image_4, r'../report/report_images/mean_shift_filter/', 'mean_shifted_image_4.tif')
+        # self.preprocessor.save_image(mean_shifted_image_5, r'../report/report_images/mean_shift_filter/', 'mean_shifted_image_5.tif')
+        # self.preprocessor.save_image(mean_shifted_image_9, r'../report/report_images/mean_shift_filter/', 'mean_shifted_image_9.tif')
+
+
+        # print("mean_shifted_image_0: ", mean_shifted_image_0.shape, mean_shifted_image_0.dtype, mean_shifted_image_0.max())
         
         kmean0 = self.kmeans(mean_shifted_image_0) 
         kmean1 = self.kmeans(mean_shifted_image_1) 
@@ -198,6 +214,12 @@ class Segmentation:
         kmean8 = self.kmeans(mean_shifted_image_8) 
         kmean9 = self.kmeans(mean_shifted_image_9)
 
+        # self.preprocessor.save_image(self.preprocessor.prepare_export(kmean2), r'../report/report_images/kmeans/', 'kmeans_2.tif')
+        # self.preprocessor.save_image(self.preprocessor.prepare_export(kmean3), r'../report/report_images/kmeans/', 'kmeans_3.tif')
+        # self.preprocessor.save_image(self.preprocessor.prepare_export(kmean4), r'../report/report_images/kmeans/', 'kmeans_4.tif')
+        # self.preprocessor.save_image(self.preprocessor.prepare_export(kmean5), r'../report/report_images/kmeans/', 'kmeans_5.tif')
+        # self.preprocessor.save_image(self.preprocessor.prepare_export(kmean9), r'../report/report_images/kmeans/', 'kmeans_9.tif')
+
         mass0 = self.eliminate(kmean0) 
         mass1 = self.eliminate(kmean1) 
         mass2 = self.eliminate(kmean2) 
@@ -208,7 +230,12 @@ class Segmentation:
         mass7 = self.eliminate(kmean7)
         mass8 = self.eliminate(kmean8) 
         mass9 = self.eliminate(kmean9)
-        
+
+        # self.preprocessor.save_image(mass2, r'../report/report_images/elimination/', 'mass_2.tif')
+        # self.preprocessor.save_image(mass3, r'../report/report_images/elimination/', 'mass_3.tif')
+        # self.preprocessor.save_image(mass4, r'../report/report_images/elimination/', 'mass_4.tif')
+        # self.preprocessor.save_image(mass5, r'../report/report_images/elimination/', 'mass_5.tif')
+        # self.preprocessor.save_image(mass9, r'../report/report_images/elimination/', 'mass_9.tif')
         
         return sifted_image, [mean_shifted_image_0, mean_shifted_image_1, mean_shifted_image_2, mean_shifted_image_3, mean_shifted_image_4, mean_shifted_image_5, mean_shifted_image_6, mean_shifted_image_7, mean_shifted_image_8, mean_shifted_image_9], [kmean0, kmean1, kmean2, kmean3, kmean4, kmean5, kmean6, kmean7, kmean8, kmean9], \
                 [mass0, mass1, mass2, mass3, mass4, mass5, mass6, mass7, mass8, mass9]
