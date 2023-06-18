@@ -10,9 +10,9 @@ dataset/output/*
 server.md
 dataset/ml_runs/* 
 
-demonestration/dataset/processed
-demonestration/dataset/cropped_raw
-demonestration/dataset/output
+demonstration/dataset/processed
+demonstration/dataset/cropped_raw
+demonstration/dataset/output
 
 TODO.md
 
