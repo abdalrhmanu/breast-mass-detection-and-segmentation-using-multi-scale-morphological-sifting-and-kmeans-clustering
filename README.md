@@ -1,5 +1,6 @@
 # <h1 align="center">Breast Mass Detection and Segmentation Using Multi-scale Morphological Sifting and K-Means Clustering</h1>
 
+Abdelrahman HABIB, Muhammad Zain Amin, Md Imran Hossain, Andrew, Dwi Permana, Anita Zhudenova
 
 ![alt text](https://github.com/abdalrhmanu/mammographic-breast-mass-detection-and-segmentation/blob/main/report/report_images/visualize_segmentation/segmentation_results_cropped.png?raw=true)
 
